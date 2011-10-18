@@ -1,1 +1,0 @@
-cmd_/root/Module/process/process.ko := ld -r -m elf_i386 -T /usr/src/kernels/2.6.40.6-0.fc15.i686.PAE/scripts/module-common.lds --build-id  -o /root/Module/process/process.ko /root/Module/process/process.o /root/Module/process/process.mod.o
