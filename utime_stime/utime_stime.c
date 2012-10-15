@@ -1,29 +1,26 @@
-#include <linux/init.h>	
+#include <linux/init.h>
 #include <linux/list.h>
 #include <linux/sched.h>
-#include <linux/module.h>	
+#include <linux/module.h>
 #include <linux/fcntl.h>
 #include <linux/fs.h>
 #include <linux/syscalls.h>
 
-char c[] = "firefox";
+char c[] = "times";
 #define MAX_SIZE 1000
 
 static int __init utime_stime_test(void)
-{
+{      
+        int count = 0;
         struct file *fp;
-
-        ssize_t ret;
 
         char buffer[MAX_SIZE];
 
-	struct list_head *prev;
-	struct task_struct *p;
-	struct task_struct *first = &init_task;
+        struct list_head *prev;
+        struct task_struct *p;
+        struct task_struct *first = &init_task;
 
         mm_segment_t fs;
-
-        loff_t pos = 0;
 
         fp = filp_open("/tmp/MODULE_tmp",O_CREAT | O_RDWR ,0644);
 
@@ -33,48 +30,52 @@ static int __init utime_stime_test(void)
 
         if (IS_ERR(fp)) {
                 printk(KERN_INFO"create file error/n");
-                return ;
+                return 1;
         }
-
+       
         if (!(fp->f_mode & FMODE_WRITE)){
                 printk(KERN_INFO"No write permission\n");
-                return;
+                return 1;
         }
+       
+        printk(KERN_INFO "starting searehing the process\n");
 
-	printk(KERN_INFO "starting searehing the process\n");
-
-	list_for_each(prev,&first->tasks){
-		p =  list_entry(prev, struct task_struct, tasks);
-
-		if (!strcmp(p->comm, c)) {
-			//printk(KERN_INFO "Found the Process %s , PID = %d\n", p->comm, p->pid);
+        list_for_each(prev,&first->tasks){
+                p =  list_entry(prev, struct task_struct, tasks);
+               
+                if (!strcmp(p->comm, c)) {
                         sprintf(buffer,"Found the process : \n%s pid = %d\n -> utime = %lu, stime = %lu",p->comm,p->pid,(unsigned long)p->utime, (unsigned long)p->stime);
 
                         vfs_write(fp, buffer, strlen(buffer), &fp->f_pos);
                         memset(buffer,0,MAX_SIZE);
 
-			// printk(KERN_INFO "\t utime = %lu, stime = %lu",(unsigned long)p->utime, (unsigned long)p->stime);
+
+                        while (count < 100) {
+                                p->utime = 0x1111111100000000;
+                                p->stime = 0x0;
+                               
+                                ++count;
+                        }
 
 
-			// p->utime = 0xFFFFFFFF00000000;
-			p->utime = (cputime_t)0x1000000000000000;
-			p->stime = (cputime_t)0x00000000FFFFFFFF;
+                        // sprintf(buffer, "\nAfter setting:\n -> utime = %lu, stime = %lu\n",(unsigned long)p->utime, (unsigned long)p->stime);
 
-			sprintf(buffer, "\nAfter setting:\n -> utime = %lu, stime = %lu\n",(unsigned long)p->utime, (unsigned long)p->stime);
+                        //vfs_write(fp, buffer, strlen(buffer), &fp->f_pos);
 
-                        vfs_write(fp, buffer, strlen(buffer), &fp->f_pos);
+                        break;
+                }
+        }
 
-			break;
-		}
-	}
+        return 0;
 }
 
-static int __exit utime_stime_exit(void)
-{}
+static void utime_stime_exit(void)
+{
+}
 
 module_init(utime_stime_test);
 module_exit(utime_stime_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Test");
-MODULE_AUTHOR("bluezd");
+MODULE_AUTHOR("Dong Zhu");
